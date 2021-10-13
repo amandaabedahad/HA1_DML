@@ -1,14 +1,13 @@
 import torch.nn as nn
 import torch
-from transformers import AutoModel, AutoTokenizer
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
 
 class SentimentClassifier(nn.Module):
-    def __init__(self, n_classes, val_dropout, PRE_TRAINED_MODEL_NAME):
+    def __init__(self, n_classes, val_dropout, pretrained_bert):
         super(SentimentClassifier, self).__init__()
-        self.bert = AutoModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        self.bert = pretrained_bert
         self.drop = nn.Dropout(p=val_dropout)
         self.out = nn.Linear(self.bert.config.hidden_size, n_classes)
 
@@ -19,6 +18,20 @@ class SentimentClassifier(nn.Module):
         )
         output = self.drop(output["pooler_output"])
         return self.out(output)
+
+
+def create_data_loader(df, tokenizer, max_len, batch_size):
+    ds = SwedishSentiDataset(
+        text_reviews=df.text.to_numpy(),
+        true_labels=df.sentiment.factorize()[0],
+        tokenizer=tokenizer,
+        max_len=max_len
+    )
+    return DataLoader(
+        ds,
+        batch_size=batch_size,
+        num_workers=0
+    )
 
 
 class SwedishSentiDataset(Dataset):
