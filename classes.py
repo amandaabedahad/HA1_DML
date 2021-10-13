@@ -13,11 +13,11 @@ class SentimentClassifier(nn.Module):
         self.out = nn.Linear(self.bert.config.hidden_size, n_classes)
 
     def forward(self, input_ids, attention_mask):
-        _, pooled_output = self.bert(
+        output = self.bert(
             input_ids=input_ids,
             attention_mask=attention_mask
         )
-        output = self.drop(pooled_output)
+        output = self.drop(output["pooler_output"])
         return self.out(output)
 
 
@@ -66,7 +66,7 @@ def train_epoch(
     for d in data_loader:
         input_ids = d["input_ids"].to(device)
         attention_mask = d["attention_mask"].to(device)
-        targets = d["targets"].to(device)
+        targets = d["true_labels"].to(device)
         outputs = model(
             input_ids=input_ids,
             attention_mask=attention_mask
@@ -78,7 +78,7 @@ def train_epoch(
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
-        # scheduler.step()
+        scheduler.step()
         optimizer.zero_grad()
     return correct_predictions.double() / n_examples, np.mean(losses)
 
@@ -91,7 +91,7 @@ def eval_model(model, data_loader, loss_fn, device, n_examples):
         for d in data_loader:
             input_ids = d["input_ids"].to(device)
             attention_mask = d["attention_mask"].to(device)
-            targets = d["targets"].to(device)
+            targets = d["true_labels"].to(device)
             outputs = model(
                 input_ids=input_ids,
                 attention_mask=attention_mask
