@@ -1,4 +1,5 @@
 from transformers import AutoModel, AutoTokenizer
+from pytorch_pretrained_bert.modeling import BertForMultipleChoice
 import pandas as pd
 
 tok = AutoTokenizer.from_pretrained('KB/bert-base-swedish-cased')
