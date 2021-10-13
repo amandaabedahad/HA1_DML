@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 from transformers import AutoModel, AutoTokenizer
 from torch.utils.data import Dataset, DataLoader
+
 import numpy as np
 
 
@@ -49,6 +50,7 @@ class SwedishSentiDataset(Dataset):
             'attention_mask': encoding['attention_mask'].flatten(),
             'true_labels': torch.tensor(target, dtype=torch.long)
         }
+
 
 
 def train_epoch(
