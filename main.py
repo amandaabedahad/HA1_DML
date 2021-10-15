@@ -6,19 +6,21 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import torch.nn as nn
 from collections import defaultdict
+import numpy as np
 
 
 torch.cuda.empty_cache()
 # CONSTANTS
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 2
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"device:{device}")
 dropout_rate_class_layer = 0.3
 n_classes = 2  # positive or negative
-max_length_sentence = 100
+max_length_sentence = 50
 
 model_name = 'KB/bert-base-swedish-cased'
+# model_name = 'bert-base-multilingual-cased'
 tok = AutoTokenizer.from_pretrained(model_name)
 pretrained_bert = AutoModel.from_pretrained(model_name)
 
@@ -26,12 +28,23 @@ for param in pretrained_bert.parameters():
     param.requires_grad = False
 
 train_data = pd.read_csv('swedish_sentiment/train.csv')
-train_data = train_data[:500]
+train_data = train_data
 
-test_data = pd.read_csv('swedish_sentiment/test.csv')[:500]
-val_data = pd.read_csv('swedish_sentiment/dev.csv')[:500]
+test_data = pd.read_csv('swedish_sentiment/test.csv')
+val_data = pd.read_csv('swedish_sentiment/dev.csv')
 
-seq_len = [len(i.split()) for i in train_data["text"]]
+seq_len = np.array([len(i.split()) for i in train_data["text"]])
+seq_len_val = np.array([len(i.split()) for i in val_data["text"]])
+seq_len_test = np.array([len(i.split()) for i in test_data["text"]])
+
+ind_train = np.argwhere(seq_len <= max_length_sentence)
+ind_val = np.argwhere(seq_len_val <= max_length_sentence)
+ind_test = np.argwhere(seq_len_test <= max_length_sentence)
+
+train_data = train_data.iloc[ind_train.flatten()]
+val_data = val_data.iloc[ind_val.flatten()]
+test_data = test_data.iloc[ind_test.flatten()]
+
 sns.histplot(seq_len)
 plt.title("Histogram of length of sentences")
 plt.xlabel("length sentence")
@@ -93,11 +106,12 @@ for epoch in range(EPOCHS):
     if val_acc > best_accuracy:
         torch.save(net_model.state_dict(), 'best_model_state.bin')
         best_accuracy = val_acc
-
+plt.figure()
 plt.plot(history['train_acc'], label='train accuracy')
 plt.plot(history['val_acc'], label='validation accuracy')
-plt.title('Training history')
+plt.title(f'Training history, model: {model_name}')
 plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
 plt.legend()
 plt.ylim([0, 1])
+plt.savefig('plots/acc_plot.png')
