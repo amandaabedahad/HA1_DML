@@ -231,6 +231,7 @@ for epoch in range(1, epochs + 1):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         best_model = copy.deepcopy(model)
+        torch.save(best_model.state_dict(), 'best_model_state_transformer.bin')
 
     scheduler.step()
 
