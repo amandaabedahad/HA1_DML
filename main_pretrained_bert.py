@@ -1,6 +1,6 @@
 from transformers import AutoModel, AutoTokenizer, AdamW, get_linear_schedule_with_warmup
 import pandas as pd
-from classes import SentimentClassifier, SwedishSentiDataset, train_epoch, eval_model, create_data_loader
+from utils_bert_pretrained import SentimentClassifier, SwedishSentiDataset, train_epoch, eval_model, create_data_loader
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -44,10 +44,10 @@ ind_test = np.argwhere(seq_len_test <= max_length_sentence)
 train_data = train_data.iloc[ind_train.flatten()]
 val_data = val_data.iloc[ind_val.flatten()]
 test_data = test_data.iloc[ind_test.flatten()]
-
+plt.rcParams.update({'font.size': 14})
 sns.histplot(seq_len)
-plt.title("Histogram of length of sentences")
-plt.xlabel("length sentence")
+plt.title("Histogram of review length")
+plt.xlabel("Number of tokens")
 plt.savefig("plots/hist_length_sentences.png")
 
 

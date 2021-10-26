@@ -65,7 +65,6 @@ class SwedishSentiDataset(Dataset):
         }
 
 
-
 def train_epoch(
         model,
         data_loader,

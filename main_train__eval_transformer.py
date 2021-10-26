@@ -66,7 +66,9 @@ class Our_dataset(Dataset):
 
 
 dataset_train = Our_dataset(train_data)
-dataset_test = Our_dataset(val_data)
+dataset_val = Our_dataset(val_data)
+dataset_test = Our_dataset(test_data)
+
 
 def my_collate(batch):
     # batch contains a list of tuples of structure (sequence, target)
@@ -81,11 +83,19 @@ train_loader = DataLoader(dataset_train,
                       collate_fn=my_collate, # use custom collate function here
                       pin_memory=True)
 
+val_loader = DataLoader(dataset_test,
+                      batch_size=batch_size,
+                      shuffle=True,
+                      collate_fn=my_collate, # use custom collate function here
+                      pin_memory=True)
+
 test_loader = DataLoader(dataset_test,
                       batch_size=batch_size,
                       shuffle=True,
                       collate_fn=my_collate, # use custom collate function here
                       pin_memory=True)
+
+
 class Transformer(torch_nn.Module):
     def __init__(self, dim, heads, depth, seq_length, num_tokens, num_classes, device):
         super().__init__()
@@ -228,33 +238,51 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(
 )
 
 print("Starting training")
+best_val_acc = 0
 for epoch in range(1, num_epochs + 1):
     start = time()
     train_loss, train_acc = train_epoch(model, train_loader, optimizer, scheduler, max_length)
-    val_loss, val_acc = validate_epoch(model, test_loader, max_length)
+    val_loss, val_acc = validate_epoch(model, val_loader, max_length)
     end = time()
     history['train_loss'].append(train_loss)
     history['train_acc'].append(train_acc)
     history['val_loss'].append(val_loss)
     history['val_acc'].append(val_acc)
+    if val_acc > best_val_acc:
+        torch.save(model.state_dict(), 'best_model_state_our_transformer.bin')
+        best_val_acc = val_acc
     print(
         "Epoch: {}/{}: time: {:.1f}, train loss: {:.3f}, train acc: {:.3f}, val. loss {:.3f}, val. acc: {:.3f}".format(
             epoch, num_epochs, end - start, train_loss, train_acc, val_loss, val_acc
         )
     )
 plt.figure()
-plt.plot(history['train_loss'], label='train_loss')
-plt.plot(history['val_loss'], label='val_loss')
+plt.plot(history['train_loss'], label='train loss')
+plt.plot(history['val_loss'], label='val loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Loss transformer')
+plt.legend()
 plt.savefig('plots/loss_transformer.png')
 plt.figure()
-plt.plot(history['train_acc'], label='train_acc')
-plt.plot(history['val_acc'], label='val_acc')
+plt.plot(history['train_acc'], label='train acc')
+plt.plot(history['val_acc'], label='val acc')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Accuracy transformer')
+plt.legend()
 plt.savefig('plots/acc_transformer.png')
 print("You have now trained a transformer!")
+test_acc = AccumulatingMetric()
+model.eval()
 
+with torch.no_grad():
+    for batch in test_loader:
+        input_, label = batch[0].to(device), torch.tensor(batch[1]).to(device)
+
+        #input_ = _truncate_input(input_, max_seq_len)
+        pred = model(input_)
+
+        test_acc.add(accuracy(pred, label))
+
+avg_test_acc = test_acc.avg()
